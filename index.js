@@ -1,22 +1,46 @@
-// Start config
-const port = 3000;
-const host = "127.0.0.1";
-const recvCountMax = 100;
-const byteLengthMaxToShow = 32;
-const startupDataDelay = 50;
-// End config
+// CONFIG
+
+// Server
+const host = "127.0.0.1"; // rtl_tcp server host
+const port = 3000; // rtl_tcp server port
+
+// Radio
+const sampleRate = 250000; // Sample rate in Hz
+const frequency = 104900000; // Frequency in Hz
+const gain = 60; // Gain in dB
+
+// Debug
+const recvCountMax = 100; // Max full buffers before exit
+const byteLengthMaxToShow = 32; // Max buffer length to show
+const startupDataDelay = 50; // Delay between sending startup params
+
+// END CONFIG
 
 const net = require("net");
 const client = new net.Socket();
 
-const sampleRate = Buffer.from([0x02,0x00,0x03,0xD0,0x90]); // 250 KHz
-const frequency = Buffer.from([0x01,0x06,0x40,0xA5,0xA0]); // 104.9 MHz
-const rtlAgcMode = Buffer.from([0x08,0x00,0x00,0x00,0x00]); // RTL AGC mode auto
-const gainMode = Buffer.from([0x08,0x00,0x00,0x00,0x00]); // Gain mode auto
-const agcMode = Buffer.from([0x0D,0x00,0x00,0x00,0x00]); // AGC mode auto
-const gainValue = Buffer.from([0x04,0x00,0x00,0x00,0x3C]); // Tuner gain 0x3C
+const prefixedBufferFromValue = function(prefix, value, length = 5){
+    if(length <= 0) throw new Error("Cannot use lengths less than 1!");
+    let position = length - 1;
+    const dataArray = new Array(length).fill(0);
+    dataArray[0] = prefix;
+    while(value != 0){
+        dataArray[position] = value & 0xFF;
+        value >>>= 8;
+        position--;
+        if(position < 0) throw new Error("Data is too large to fit length " + length + "!");
+    }
+    return Buffer.from(dataArray);
+}
 
-const startupData = [sampleRate, frequency, rtlAgcMode, gainMode, agcMode, gainValue];
+const sampleRateData = prefixedBufferFromValue(0x02, sampleRate);
+const frequencyData = prefixedBufferFromValue(0x01, frequency);
+const rtlAgcModeData = Buffer.from([0x08,0x00,0x00,0x00,0x00]); // RTL AGC mode auto
+const gainModeData = Buffer.from([0x08,0x00,0x00,0x00,0x00]); // Gain mode auto
+const agcModeData = Buffer.from([0x0D,0x00,0x00,0x00,0x00]); // AGC mode auto
+const gainValueData = prefixedBufferFromValue(0x04, gain);
+
+const startupData = [sampleRateData, frequencyData, rtlAgcModeData, gainModeData, agcModeData, gainValueData];
 
 let recvCount = 0;
 
@@ -27,6 +51,7 @@ const writeStartupData = function(i = 0){
         writeStartupData(i + 1);
     }, startupDataDelay);
 }
+
 
 client.connect(port, host, function() {
 	console.log("Connected!");
