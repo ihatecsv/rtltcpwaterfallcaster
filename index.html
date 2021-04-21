@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Waterfall</title>
+        <style>
+            body, html {
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+            }
+        </style>
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+        <script>
+            
+            const canvasElem = document.getElementById("canvas");
+            const canvasCtx = canvasElem.getContext("2d");
+
+            window.onload = window.onresize = function() {
+                canvasElem.width = window.innerWidth;
+                canvasElem.height = window.innerHeight;
+            }
+
+            const pallete = [
+                "#fafa6e",
+                "#edf76f",
+                "#e0f470",
+                "#d4f171",
+                "#c8ed73",
+                "#bcea75",
+                "#b0e678",
+                "#a5e27a",
+                "#99de7c",
+                "#8eda7f",
+                "#83d681",
+                "#79d283",
+                "#6ecd85",
+                "#64c987",
+                "#5ac489",
+                "#50bf8b",
+                "#46bb8c",
+                "#3cb68d",
+                "#32b18e",
+                "#28ac8f",
+                "#1ea78f",
+                "#12a28f",
+                "#039d8f",
+                "#00988e",
+                "#00938d",
+                "#008e8c",
+                "#00898a",
+                "#008488",
+                "#007e86",
+                "#007983",
+                "#057480",
+                "#0e6f7d",
+                "#156a79",
+                "#1a6575",
+                "#1e6071",
+                "#225b6c",
+                "#255667",
+                "#275163",
+                "#294d5d",
+                "#2a4858"
+            ]
+            const maxNum = 600;
+            const socket = new WebSocket("ws://127.0.0.1:8080");
+        
+            const sendSize = function(){
+                setTimeout(function(){
+                    if(!socket.readyState){
+                        return sendSize();
+                    }
+                    console.log("Sent!")
+                    socket.send(canvasElem.width);
+                }, 500);
+            }
+
+            const mapValues = function(x, inMin, inMax, outMin, outMax) {
+                return (x - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+            }
+        
+            const newData = function(data){
+                console.log(data);
+                const existingImage = canvasCtx.getImageData(0, 0, canvas.width, canvas.height);
+                canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+                canvasCtx.putImageData(existingImage, 0, 1);
+                for(let i = 0; i < data.length; i++){
+                    const colorChoice = Math.floor(mapValues(data[i], 0, maxNum, 0, pallete.length));
+                    canvasCtx.fillStyle = pallete[colorChoice];
+                    canvasCtx.fillRect(i, 0, 1, 1); // x, y
+                }
+            }
+
+            socket.onmessage = function (event) {
+                const fileReader = new FileReader();
+                let array;
+        
+                fileReader.onload = function() {
+                    newData(new Uint16Array(this.result));
+                };
+        
+                fileReader.readAsArrayBuffer(event.data);
+            }
+            sendSize();
+        </script>        
+	</body>
+</html>
+
