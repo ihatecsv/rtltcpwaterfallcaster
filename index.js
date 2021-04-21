@@ -20,7 +20,7 @@ const net = require("net");
 const client = new net.Socket();
 
 const prefixedBufferFromValue = function(prefix, value, length = 5){
-    if(length <= 0) throw new Error("Cannot use lengths less than 1!");
+    if(length <= 0) throw new Error("Cannot use length less than 1!");
     let position = length - 1;
     const dataArray = new Array(length).fill(0);
     dataArray[0] = prefix;
