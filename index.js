@@ -18,6 +18,7 @@ const iqPeakRemoval = false; // Find average of signal and subtract
 const startupDataDelay = 50; // Delay between sending startup params
 const firstPacketLength = 12; // Expected number of bytes for dongle ID
 const averageMax = 1024;
+
 // END CONFIG
 
 const net = require("net");
