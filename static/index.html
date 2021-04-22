@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>RTLTCPWaterfallCaster</title>
+		<style>
+			body,
+			html {
+				margin: 0;
+				padding: 0;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+		<canvas id="spectrum-canvas"></canvas>
+		<script>
+			const spectrumCanvasElem = document.getElementById("spectrum-canvas")
+			const canvasElem = document.getElementById("canvas");
+
+			const spectrumCanvasCtx = spectrumCanvasElem.getContext("2d");
+			const canvasCtx = canvasElem.getContext("2d");
+
+			const pallete = [];
+			const spectrumImage = new Image();
+			const minNum = 300;
+			const maxNum = 12000;
+			const scale = 1;
+
+			const sendSize = function () {
+				setTimeout(function () {
+					if (!socket.readyState) {
+						return sendSize();
+					}
+					console.log("Sent!");
+					socket.send(canvasElem.width / scale);
+				}, 500);
+			};
+
+			const mapValues = function (x, inMin, inMax, outMin, outMax) {
+				return (
+					((x - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin
+				);
+			};
+
+			const newData = function (data) {
+				// console.log(data);
+				const existingImage = canvasCtx.getImageData(
+					0,
+					0,
+					canvas.width,
+					canvas.height
+				);
+				canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+				canvasCtx.putImageData(existingImage, 0, scale);
+				for (let i = 0; i < data.length; i++) {
+					let colorChoice = Math.floor(
+						mapValues(
+							maxNum - data[i],
+							minNum,
+							maxNum,
+							0,
+							pallete.length
+						)
+					);
+					if(colorChoice < 0) colorChoice = 0;
+					canvasCtx.fillStyle = pallete[colorChoice];
+					canvasCtx.fillRect(i * scale, 0, scale, scale); // x, y
+				}
+			};
+
+			spectrumImage.onload = function() {
+				spectrumCanvasCtx.drawImage(spectrumImage, 0, 0);
+				for(let x = 0; x < spectrumImage.width; x++){
+					const imageData = spectrumCanvasCtx.getImageData(x, Math.floor(spectrumImage.height / 2), 1, 1);
+					const red = imageData.data[0];
+					const green = imageData.data[1];
+					const blue = imageData.data[2];
+					//const alpha = imageData.data[3];
+					pallete.push(`rgb(${red},${green},${blue})`);
+
+				}
+				startWaterfall(pallete);
+			}
+
+			const socket = new WebSocket("ws://127.0.0.1:8080");
+			spectrumImage.src = "spectrum.png";
+
+			const startWaterfall = function() {
+				window.onload = window.onresize = function () {
+					canvasElem.width = window.innerWidth;
+					canvasElem.height = window.innerHeight;
+					sendSize();
+				};
+
+				socket.onmessage = function (event) {
+					const fileReader = new FileReader();
+					let array;
+
+					fileReader.onload = function () {
+						newData(new Uint16Array(this.result));
+					};
+
+					fileReader.readAsArrayBuffer(event.data);
+				};
+				sendSize();
+			}
+		</script>
+	</body>
+</html>

@@ -11,7 +11,7 @@ const webServerPort = 8080; // Web server port
 // Radio
 const sampleRate = 250000; // Sampling rate in Hz
 const frequency = 104900000; // Frequency in Hz
-const gain = 60; // Gain in dB
+const gain = 30; // Gain in dB
 const iqPeakRemoval = false; // Find average of signal and subtract
 
 // Debug
@@ -24,7 +24,7 @@ const averageMax = 1024; // Max number to count to when averaging before reset
 const net = require("net");
 const http = require("http");
 const WebSocket = require("ws");
-const fs = require("fs").promises;
+const fs = require("fs");
 const transforms = require("@signalprocessing/transforms");
 const client = new net.Socket();
 
@@ -32,10 +32,14 @@ let bandDataArray = [];
 let currentResolution = 300;
 
 const requestListener = function (req, res) {
-	fs.readFile(__dirname + "/index.html").then((contents) => {
-		res.setHeader("Content-Type", "text/html");
+	fs.readFile(__dirname + "/static" + req.url, function (err, data) {
+		if(err) {
+			res.writeHead(404);
+			res.end(JSON.stringify(err));
+			return;
+		}
 		res.writeHead(200);
-		res.end(contents);
+		res.end(data);
 	});
 };
 
