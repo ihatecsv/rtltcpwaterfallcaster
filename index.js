@@ -1,8 +1,8 @@
 // CONFIG
 
-// RTL_SDR erver
-const rtlsdrHost = "127.0.0.1"; // rtl_tcp server host
-const rtlsdrPort = 3000; // rtl_tcp server port
+// RTL_TCP erver
+const rtltcpHost = "127.0.0.1"; // rtl_tcp server host
+const rtltcpPort = 3000; // rtl_tcp server port
 
 // Web server
 const webServerHost = "127.0.0.1"; // Web server host
@@ -137,8 +137,8 @@ const writeStartupData = function (i = 0) {
 	}, startupDataDelay);
 };
 
-client.connect(rtlsdrPort, rtlsdrHost, function () {
-	console.log("Connected to rtl_tcp server at " + rtlsdrHost + ":" + rtlsdrPort);
+client.connect(rtltcpPort, rtltcpHost, function () {
+	console.log("Connected to rtl_tcp server at " + rtltcpHost + ":" + rtltcpPort);
 	writeStartupData();
 });
 
