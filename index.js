@@ -1,8 +1,12 @@
 // CONFIG
 
-// Server
-const host = "127.0.0.1"; // rtl_tcp server host
-const port = 3000; // rtl_tcp server port
+// RTL_SDR erver
+const rtlsdrHost = "127.0.0.1"; // rtl_tcp server host
+const rtlsdrPort = 3000; // rtl_tcp server port
+
+// Web server
+const webServerHost = "127.0.0.1"; // Web server host
+const webServerPort = 8080; // Web server port
 
 // Radio
 const sampleRate = 250000; // Sampling rate in Hz
@@ -24,7 +28,7 @@ const transforms = require("@signalprocessing/transforms");
 const client = new net.Socket();
 
 let bandDataArray = [];
-let currentResolution = 300; // How many samples of the final data should we send
+let currentResolution = 300;
 
 const requestListener = function (req, res) {
     fs.readFile(__dirname + "/index.html")
@@ -132,8 +136,8 @@ const writeStartupData = function (i = 0) {
 	}, startupDataDelay);
 };
 
-client.connect(port, host, function () {
-	console.log("Connected to rtl_tcp server at " + host + ":" + port);
+client.connect(rtlsdrPort, rtlsdrHost, function () {
+	console.log("Connected to rtl_tcp server at " + rtlsdrHost + ":" + rtlsdrPort);
 	writeStartupData();
 });
 
@@ -173,11 +177,12 @@ client.on("close", function () {
 });
 
 wss.on("connection", function connection(ws) {
-    console.log("New WS client!");
+    console.log("New client connected!");
 	ws.on("message", function incoming(data) {
         // New resolution
         currentResolution = parseInt(data);
 	});
 });
 
-server.listen(8080, "127.0.0.1");
+server.listen(webServerPort, webServerHost);
+console.log("Web server listening at " + webServerHost + ":" + webServerPort)
