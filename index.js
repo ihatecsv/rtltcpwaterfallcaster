@@ -17,7 +17,7 @@ const iqPeakRemoval = false; // Find average of signal and subtract
 // Debug
 const startupDataDelay = 50; // Delay between sending startup params
 const firstPacketLength = 12; // Expected number of bytes for dongle ID
-const averageMax = 1024;
+const averageMax = 1024; // Max number to count to when averaging before reset
 
 // END CONFIG
 
