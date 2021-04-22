@@ -17,12 +17,21 @@
             const canvasElem = document.getElementById("canvas");
             const canvasCtx = canvasElem.getContext("2d");
 
-            window.onload = window.onresize = function() {
-                canvasElem.width = window.innerWidth;
-                canvasElem.height = window.innerHeight;
-            }
-
             const pallete = [
+                "#ffffff",
+                "#fffff5",
+                "#fffeeb",
+                "#fffee1",
+                "#fffdd7",
+                "#fffdcd",
+                "#fffdc3",
+                "#fffcb9",
+                "#fffcaf",
+                "#fffca4",
+                "#fffb9a",
+                "#fefb8f",
+                "#fdfb85",
+                "#fbfa7a",
                 "#fafa6e",
                 "#edf76f",
                 "#e0f470",
@@ -64,7 +73,7 @@
                 "#294d5d",
                 "#2a4858"
             ]
-            const maxNum = 600;
+            const maxNum = 20000;
             const socket = new WebSocket("ws://127.0.0.1:8080");
         
             const sendSize = function(){
@@ -87,10 +96,16 @@
                 canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
                 canvasCtx.putImageData(existingImage, 0, 1);
                 for(let i = 0; i < data.length; i++){
-                    const colorChoice = Math.floor(mapValues(data[i], 0, maxNum, 0, pallete.length));
+                    const colorChoice = Math.floor(mapValues(maxNum - data[i], 0, maxNum, 0, pallete.length));
                     canvasCtx.fillStyle = pallete[colorChoice];
                     canvasCtx.fillRect(i, 0, 1, 1); // x, y
                 }
+            }
+
+            window.onload = window.onresize = function() {
+                canvasElem.width = window.innerWidth;
+                canvasElem.height = window.innerHeight;
+                sendSize();
             }
 
             socket.onmessage = function (event) {
