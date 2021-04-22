@@ -32,16 +32,18 @@ let bandDataArray = [];
 let currentResolution = 300;
 
 const requestListener = function (req, res) {
-    fs.readFile(__dirname + "/index.html")
-        .then(contents => {
-            res.setHeader("Content-Type", "text/html");
-            res.writeHead(200);
-            res.end(contents);
-        })
+	fs.readFile(__dirname + "/index.html").then((contents) => {
+		res.setHeader("Content-Type", "text/html");
+		res.writeHead(200);
+		res.end(contents);
+	});
 };
 
 const server = http.createServer(requestListener);
-const wss = new WebSocket.Server({ server: server, autoAcceptConnections: false });
+const wss = new WebSocket.Server({
+	server: server,
+	autoAcceptConnections: false,
+});
 
 const makePrefixedBuffer = function (prefix, value, length = 5) {
 	if (length <= 0) throw new Error("Cannot use length less than 1!");
@@ -63,15 +65,15 @@ let averageCount = 0;
 let processing = false;
 
 const fftTransformBandData = async function () {
-    averageCount++;
+	averageCount++;
 	const dataI = [];
 	const dataQ = [];
-    if(averageCount > averageMax){
-        averageCount = Math.floor(averageCount / 2);
-        for(let i = 0; i < dataSum.length; i++){
-            dataSum[i] = Math.floor(dataSum[i] / 2);
-        }
-    }
+	if (averageCount > averageMax) {
+		averageCount = Math.floor(averageCount / 2);
+		for (let i = 0; i < dataSum.length; i++) {
+			dataSum[i] = Math.floor(dataSum[i] / 2);
+		}
+	}
 	for (let i = 0; i < bandDataArray.length; i++) {
 		if (i % 2 == 0) {
 			dataI.push(bandDataArray[i] - 127.5);
@@ -79,36 +81,42 @@ const fftTransformBandData = async function () {
 			dataQ.push(bandDataArray[i] - 127.5);
 		}
 	}
-    bandDataArray = [];
-	const period = 1 / sampleRate;
-	let t = Array.from({ length: dataI.length }, (x, i) => i * period);
-	let [fftOutReal, fftOutComplex] = transforms.fft(
-		dataI,
-		dataQ
-	);
+	bandDataArray = [];
 
-    const sendDataBuffer = [];
+	let [fftOutReal, fftOutComplex] = transforms.fft(dataI, dataQ);
 
-    for(let i = 0; i < fftOutReal.length; i++){
-        if(i % 2 == 0){
-            dataSum[i] += fftOutReal[i];
-            dataSum[i+1] += fftOutComplex[i];
+	const sendDataBuffer = [];
 
-            fftOutReal[i] = fftOutReal[i] - (iqPeakRemoval ? Math.round(dataSum[i] / averageCount) : 0);
-            fftOutComplex[i] = fftOutComplex[i] - (iqPeakRemoval ? Math.round(dataSum[i+1] / averageCount) : 0);
-        }
-        const magnitude = Math.round(Math.sqrt((fftOutReal[i] * fftOutReal[i]) + (fftOutComplex[i] * fftOutComplex[i])));
-        if(i % Math.floor(fftOutReal.length / currentResolution) == 0) sendDataBuffer.push(magnitude);
-    }
+	for (let i = 0; i < fftOutReal.length; i++) {
+		if (i % 2 == 0) {
+			dataSum[i] += fftOutReal[i];
+			dataSum[i + 1] += fftOutComplex[i];
 
-    let data = Uint16Array.from(sendDataBuffer);
+			fftOutReal[i] =
+				fftOutReal[i] -
+				(iqPeakRemoval ? Math.round(dataSum[i] / averageCount) : 0);
+			fftOutComplex[i] =
+				fftOutComplex[i] -
+				(iqPeakRemoval ? Math.round(dataSum[i + 1] / averageCount) : 0);
+		}
+		const magnitude = Math.round(
+			Math.sqrt(
+				fftOutReal[i] * fftOutReal[i] +
+					fftOutComplex[i] * fftOutComplex[i]
+			)
+		);
+		if (i % Math.floor(fftOutReal.length / currentResolution) == 0)
+			sendDataBuffer.push(magnitude);
+	}
 
-    processing = false;
-    wss.clients.forEach(function each(client) {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(data);
-        }
-    });
+	let data = Uint16Array.from(sendDataBuffer);
+
+	processing = false;
+	wss.clients.forEach(function each(client) {
+		if (client.readyState === WebSocket.OPEN) {
+			client.send(data);
+		}
+	});
 };
 
 const sampleRateData = makePrefixedBuffer(0x02, sampleRate);
@@ -138,12 +146,14 @@ const writeStartupData = function (i = 0) {
 };
 
 client.connect(rtltcpPort, rtltcpHost, function () {
-	console.log("Connected to rtl_tcp server at " + rtltcpHost + ":" + rtltcpPort);
+	console.log(
+		"Connected to rtl_tcp server at " + rtltcpHost + ":" + rtltcpPort
+	);
 	writeStartupData();
 });
 
 client.on("data", function (data) {
-    if (processing) return;
+	if (processing) return;
 	if (firstPacket) {
 		if (data.length != firstPacketLength) {
 			throw new Error(
@@ -168,7 +178,7 @@ client.on("data", function (data) {
 		bandDataArray.push(data[i]);
 	}
 	if (i < byteLength) {
-        processing = true;
+		processing = true;
 		fftTransformBandData();
 	}
 });
@@ -178,12 +188,12 @@ client.on("close", function () {
 });
 
 wss.on("connection", function connection(ws) {
-    console.log("New client connected!");
+	console.log("New client connected!");
 	ws.on("message", function incoming(data) {
-        // New resolution
-        currentResolution = parseInt(data);
+		// New resolution
+		currentResolution = parseInt(data);
 	});
 });
 
 server.listen(webServerPort, webServerHost);
-console.log("Web server listening at " + webServerHost + ":" + webServerPort)
+console.log("Web server listening at " + webServerHost + ":" + webServerPort);
