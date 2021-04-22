@@ -55,6 +55,7 @@ const makePrefixedBuffer = function (prefix, value, length = 5) {
 
 const dataSum = new Array(sampleRate).fill(0);
 let averageCount = 0;
+let processing = false;
 
 const fftTransformBandData = async function () {
     averageCount++;
@@ -73,6 +74,7 @@ const fftTransformBandData = async function () {
 			dataQ.push(bandDataArray[i] - 127.5);
 		}
 	}
+    bandDataArray = [];
 	const period = 1 / sampleRate;
 	let t = Array.from({ length: dataI.length }, (x, i) => i * period);
 	let [fftOutReal, fftOutComplex] = transforms.fft(
@@ -87,8 +89,8 @@ const fftTransformBandData = async function () {
             dataSum[i] += fftOutReal[i];
             dataSum[i+1] += fftOutComplex[i];
 
-            fftOutReal[i] = fftOutReal[i] - iqPeakRemoval ? Math.round(dataSum[i] / averageCount) : 0;
-            fftOutComplex[i] = fftOutComplex[i] - iqPeakRemoval ? Math.round(dataSum[i+1] / averageCount) : 0;
+            fftOutReal[i] = fftOutReal[i] - (iqPeakRemoval ? Math.round(dataSum[i] / averageCount) : 0);
+            fftOutComplex[i] = fftOutComplex[i] - (iqPeakRemoval ? Math.round(dataSum[i+1] / averageCount) : 0);
         }
         const magnitude = Math.round(Math.sqrt((fftOutReal[i] * fftOutReal[i]) + (fftOutComplex[i] * fftOutComplex[i])));
         if(i % Math.floor(fftOutReal.length / currentResolution) == 0) sendDataBuffer.push(magnitude);
@@ -96,6 +98,7 @@ const fftTransformBandData = async function () {
 
     let data = Uint16Array.from(sendDataBuffer);
 
+    processing = false;
     wss.clients.forEach(function each(client) {
         if (client.readyState === WebSocket.OPEN) {
             client.send(data);
@@ -119,7 +122,6 @@ const startupData = [
 	gainValueData,
 ];
 
-let recvCount = 0;
 let firstPacket = true;
 
 const writeStartupData = function (i = 0) {
@@ -136,6 +138,7 @@ client.connect(port, host, function () {
 });
 
 client.on("data", function (data) {
+    if (processing) return;
 	if (firstPacket) {
 		if (data.length != firstPacketLength) {
 			throw new Error(
@@ -152,7 +155,7 @@ client.on("data", function (data) {
 		firstPacket = false;
 		return;
 	}
-	recvCount++;
+
 	const byteLength = Buffer.byteLength(data);
 	let i = 0;
 	for (; i < byteLength; i++) {
@@ -160,11 +163,8 @@ client.on("data", function (data) {
 		bandDataArray.push(data[i]);
 	}
 	if (i < byteLength) {
+        processing = true;
 		fftTransformBandData();
-		bandDataArray = [];
-		for (; i < byteLength; i++) {
-			bandDataArray.push(data[i]);
-		}
 	}
 });
 
